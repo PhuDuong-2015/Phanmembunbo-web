@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Phần mềm bán bún bò</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .ban {
+      display: inline-block; width: 80px; height: 80px; margin: 5px;
+      background: #eee; border-radius: 10px; text-align: center; line-height: 80px;
+      cursor: pointer; border: 2px solid #ccc;
+      user-select: none;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .ban.dathanhtoan {
+      background: #c2f0c2;
+      border-color: #4CAF50;
+      color: #2d662d;
+      font-weight: bold;
+    }
+    #chitiet {
+      margin-top: 20px; padding: 15px; border: 1px solid #aaa; border-radius: 5px;
+      display: none;
+      max-width: 600px;
+    }
+    .chon select, .chon button {
+      font-size: 16px; padding: 5px; margin: 5px 5px 5px 0;
+      cursor: pointer;
+    }
+    ul li {
+      margin-bottom: 5px;
+      user-select: none;
+    }
+    .giamBtn {
+      margin-left: 10px; color: red; cursor: pointer; font-weight: bold;
+    }
+    .checkbox-group label {
+      margin-right: 10px;
+      user-select: none;
+    }
+    #btnThanhToan {
+      margin-left: 15px;
+      padding: 3px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    #btnThanhToan:hover {
+      background-color: #45a049;
+    }
+    #donNho {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 280px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      font-size: 14px;
+      z-index: 9999;
+    }
+    #donNho h3 {
+      margin-top: 0;
+      font-size: 16px;
+      text-align: center;
+    }
+    .donBan {
+      border-bottom: 1px solid #ddd;
+      padding: 5px 0;
+    }
+    .donBan:last-child {
+      border-bottom: none;
+    }
+    .donBan .tenBan {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .donBan ul {
+      padding-left: 15px;
+      margin: 0 0 5px 0;
+    }
+    .donBan button {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      float: right;
+      margin-top: -28px;
+    }
+    .donBan button:hover {
+      background-color: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Phần mềm bán bún bò</h1>
+<div id="dsban"></div>
+
+<div id="chitiet">
+  <h2>Chi tiết Bàn <span id="soBan"></span></h2>
+  <p><strong>Trạng thái:</strong> <span id="trangThai"></span>
+    <button id="btnThanhToan" onclick="thanhToan()" style="display:none;">Thanh toán</button>
+  </p>
+
+  <div class="chon">
+    <select id="chonMon">
+      <option value="">-- Chọn món --</option>
+    </select>
+    <div id="ghiChuBox" class="checkbox-group">
+      <label><input type="checkbox" value="Thêm hành"> Thêm hành</label>
+      <label><input type="checkbox" value="Không hành"> Không hành</label>
+      <label><input type="checkbox" value="Ít bún"> Ít bún</label>
+      <label><input type="checkbox" value="Nhiều bún"> Nhiều bún</label>
+    </div>
+    <button onclick="themMon()">➕ Thêm món</button>
+    <button onclick="xacNhan()">✅ Xác nhận</button>
+  </div>
+
+  <p><strong>Món đã gọi:</strong></p>
+  <ul id="danhSachMon"></ul>
+</div>
+
+<!-- Ô đơn nhỏ góc phải dưới -->
+<div id="donNho">
+  <h3>Đơn đang gọi</h3>
+  <div id="dsDonNho"></div>
+</div>
+
+<script>
+  const dsMon = ["Bún bò đặc biệt", "Bún bò gân", "Bún bò tái", "Trà đá", "Nước ngọt"];
+  const dataBan = {};
+  for (let i = 1; i <= 40; i++) {
+    dataBan[i] = { mon: {}, thanhtoan: false, thoigianThanhToan: null, daXacNhan: false };
+  }
+
+  const dsban = document.getElementById("dsban");
+  for (let i = 1; i <= 40; i++) {
+    const ban = document.createElement("div");
+    ban.className = "ban";
+    ban.textContent = "Bàn " + i;
+    ban.onclick = () => xemChiTiet(i);
+    dsban.appendChild(ban);
+  }
+
+  const chonMon = document.getElementById("chonMon");
+  dsMon.forEach(mon => {
+    const opt = document.createElement("option");
+    opt.value = mon;
+    opt.textContent = mon;
+    chonMon.appendChild(opt);
+  });
+
+  let banDangChon = null;
+
+  function xemChiTiet(so) {
+    banDangChon = so;
+    const info = dataBan[so];
+    document.getElementById("soBan").textContent = so;
+
+    const trangThaiEl = document.getElementById("trangThai");
+    if (info.thanhtoan) {
+      const tg = new Date(info.thoigianThanhToan);
+      const tgStr = tg.toLocaleTimeString('vi-VN', { hour12: false });
+      trangThaiEl.textContent = `Đã thanh toán lúc ${tgStr}`;
+    } else {
+      trangThaiEl.textContent = "Chưa thanh toán";
+    }
+
+    const btnThanhToan = document.getElementById("btnThanhToan");
+    btnThanhToan.style.display = (info.daXacNhan && !info.thanhtoan) ? "inline-block" : "none";
+
+    capNhatDanhSach();
+    capNhatDonNho();
+    document.getElementById("chitiet").style.display = "block";
+  }
+
+  function getGhiChuDaChon() {
+    const checked = document.querySelectorAll('#ghiChuBox input:checked');
+    return Array.from(checked).map(i => i.value.trim()).sort().join(" + ");
+  }
+
+  function themMon() {
+    const mon = chonMon.value;
+    const ghichu = getGhiChuDaChon();
+    if (!mon) return alert("Bạn chưa chọn món!");
+
+    const monDaGoi = dataBan[banDangChon].mon;
+    if (!monDaGoi[mon]) monDaGoi[mon] = {};
+    if (!monDaGoi[mon][ghichu]) monDaGoi[mon][ghichu] = 0;
+    monDaGoi[mon][ghichu]++;
+
+    capNhatDanhSach();
+    capNhatDonNho();
+  }
+
+  function giamMon(mon, ghichu) {
+    const monDaGoi = dataBan[banDangChon].mon;
+    if (monDaGoi[mon] && monDaGoi[mon][ghichu]) {
+      monDaGoi[mon][ghichu]--;
+      if (monDaGoi[mon][ghichu] <= 0) delete monDaGoi[mon][ghichu];
+      if (Object.keys(monDaGoi[mon]).length === 0) delete monDaGoi[mon];
+    }
+    capNhatDanhSach();
+    capNhatDonNho();
+  }
+
+  function capNhatDanhSach() {
+    const danhSach = document.getElementById("danhSachMon");
+    danhSach.innerHTML = "";
+    const monDaGoi = dataBan[banDangChon].mon;
+    let coMon = false;
+
+    for (let mon in monDaGoi) {
+      for (let ghichu in monDaGoi[mon]) {
+        coMon = true;
+        const li = document.createElement("li");
+        li.textContent = `${mon}${ghichu ? " (" + ghichu + ")" : ""} × ${monDaGoi[mon][ghichu]}`;
+        const btn = document.createElement("span");
+        btn.textContent = "➖";
+        btn.className = "giamBtn";
+        btn.onclick = () => giamMon(mon, ghichu);
+        li.appendChild(btn);
+        danhSach.appendChild(li);
+      }
+    }
+
+    if (!coMon) danhSach.innerHTML = "<li>Chưa gọi món</li>";
+  }
+
+  function xacNhan() {
+    if (banDangChon === null) return;
+    dataBan[banDangChon].daXacNhan = true;
+    alert(`✅ Đã xác nhận đơn hàng cho bàn ${banDangChon}`);
+    xemChiTiet(banDangChon);
+  }
+
+  function thanhToan() {
+    if (banDangChon === null) return;
+    if (!confirm(`Bạn chắc chắn thanh toán bàn ${banDangChon}?`)) return;
+
+    dataBan[banDangChon].thanhtoan = true;
+    dataBan[banDangChon].thoigianThanhToan = new Date();
+    dataBan[banDangChon].daXacNhan = false;
+    alert(`Bàn ${banDangChon} đã thanh toán!`);
+    xemChiTiet(banDangChon);
+    document.querySelectorAll(".ban")[banDangChon - 1].classList.add("dathanhtoan");
+    capNhatDonNho();
+
+    setTimeout(() => {
+      resetBan(banDangChon);
+    }, 300000);
+  }
+
+  function resetBan(soBan) {
+    dataBan[soBan] = { mon: {}, thanhtoan: false, thoigianThanhToan: null, daXacNhan: false };
+    if (banDangChon === soBan) xemChiTiet(soBan);
+    document.querySelectorAll(".ban")[soBan - 1].classList.remove("dathanhtoan");
+    capNhatDonNho();
+  }
+
+  function capNhatDonNho() {
+    const dsDonNho = document.getElementById("dsDonNho");
+    dsDonNho.innerHTML = "";
+
+    for (let soBan in dataBan) {
+      const info = dataBan[soBan];
+      if (info.thanhtoan) continue;
+      const monDaGoi = info.mon;
+      if (Object.keys(monDaGoi).length === 0) continue;
+
+      const donBan = document.createElement("div");
+      donBan.className = "donBan";
+
+      const tenBan = document.createElement("div");
+      tenBan.className = "tenBan";
+      tenBan.textContent = `Bàn ${soBan}`;
+
+      const ul = document.createElement("ul");
+      for (let mon in monDaGoi) {
+        for (let ghichu in monDaGoi[mon]) {
+          const li = document.createElement("li");
+          li.textContent = `${mon}${ghichu ? " (" + ghichu + ")" : ""} × ${monDaGoi[mon][ghichu]}`;
+          ul.appendChild(li);
+        }
+      }
+
+      const btnTT = document.createElement("button");
+      btnTT.textContent = "Thanh toán";
+      btnTT.onclick = () => {
+        banDangChon = parseInt(soBan);
+        thanhToan();
+      };
+
+      donBan.appendChild(tenBan);
+      donBan.appendChild(btnTT);
+      donBan.appendChild(ul);
+      dsDonNho.appendChild(donBan);
+    }
+
+    if (dsDonNho.innerHTML === "") {
+      dsDonNho.innerHTML = "<p>Chưa có đơn đang gọi</p>";
+    }
+  }
+</script>
+
+</body>
+</html>
